@@ -27,15 +27,18 @@ This project implements a fully connected neural network from scratch to classif
 - Download the file requirements.txt to find the entire list of dependencies
 
 ## Usage
-- I recommend using a virtual environment when running the program
-- In the src folder, open your virtual environment, and run
-pip install -r requirements.txt
-- This will download all the required libraries 
-- Run the file using python3 Neural_Network.py training_file testing_file test_label [train|test]
-- training_file is the filepath to your training data.
-- testing_file is the filepath to your testing data
-- type "true" for test_label if your test data has labels. Training data naturally has labels. Type "false" if your test data does not have labels
-- the last argument [train|test] is required for the code to run. If it does not exist the code will not do anything. Entering "train" will cause the model to start training based on data from the training_file path. Entering "test" will cause the model to test the model against the data in the test_file
+### Train a new model
+python Neural_Network.py train <training_file> [yes]
+
+### Explanation
+- When training, indicate where you data is in <training_file>
+- Type yes if you wish to save the training weights
+
+### Test a model
+python Neural_Network.py test <testing_file> <weights_file>
+
+### Explanation
+- When testing, you need to indicate a testing file (<testing_file>) to pull your testing data and weights file (<weights_file>) to determine which weights you wish to use
 
 ## Future Improvements
 - Add batch norm to push model accuracy
