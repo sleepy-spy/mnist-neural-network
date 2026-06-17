@@ -18,6 +18,15 @@ class LoadData:
         split = int(val_split * len(X))
         return (X[:split], y[:split]), (X[split:], y[split:])
 
+    @classmethod
+    def load_test(
+        cls, filepath: str, has_labels: bool = True
+    ) -> tuple[NDArray[np.float64], NDArray[np.int_] | None]:
+        data = np.loadtxt(filepath, delimiter=",")
+        if has_labels:
+            return data[:, 1:] / 255, data[:, 0].astype(int)
+        return data / 255, None
+
 
 class Layer:
     def __init__(self, fan_in: int, fan_out: int):
