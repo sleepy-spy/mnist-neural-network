@@ -404,28 +404,32 @@ def test(
 
 
 def main():
-    train_or_test = (
-        input("Would you like to train the model or test the model? (train/test): ")
-        .lower()
-        .strip()
-    )
-    if train_or_test == "test":
-        invalid_label_presence = True
-        while invalid_label_presence:
-            test_labels_presence = input("Does your test data have labels? (y/n): ")
-            if test_labels_presence == "y":
-                test_label = True
-                invalid_label_presence = False
-            elif test_labels_presence == "n":
-                test_label = False
-                invalid_label_presence = False
-        big_data = LoadData(sys.argv[1], sys.argv[2], test_label=test_label)
-        test(big_data=big_data)
-        print("Testing complete")
-    elif train_or_test == "train":
-        big_data = LoadData(sys.argv[1], sys.argv[2], test_label=False)
-        train(big_data=big_data)
-        print("Training complete")
+    if len(sys.argv) < 3:
+        print("Usage:")
+        print("  python3 Neural_Network.py train <training_file> [yes]")
+        print("  python3 Neural_Network.py test <testing_file> <weights_file>")
+        return
+
+    command = sys.argv[1].lower()
+
+    if command == "train":
+        training_file = sys.argv[2]
+        save_path = None
+        if len(sys.argv) >= 4 and sys.argv[3].lower() == "yes":
+            save_path = "Models/model_parameters.npz"
+        train(training_file, save_path)
+
+    elif command == "test":
+        if len(sys.argv) < 4:
+            print("Usage: python3 Neural_Network.py test <testing_file> <weights_file>")
+            return
+        testing_file = sys.argv[2]
+        weights_file = sys.argv[3]
+        test(testing_file, weights_file)
+
+    else:
+        print(f"Unknown command: {command}")
+        print("Use 'train' or 'test'")
 
 
 if __name__ == "__main__":
