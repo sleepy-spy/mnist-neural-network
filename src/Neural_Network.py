@@ -4,50 +4,19 @@ import sys
 
 
 class LoadData:
-    def __init__(self, training_file: str, testing_file: str, test_label: bool):
-        self.label_present = test_label
-        self.training_data = np.loadtxt(
-            training_file,
-            delimiter=",",
-            skiprows=1,
-        )
-        self.X_train, self.Y_train = self.training_data[
-            :, 1:
-        ] / 255, self.training_data[:, 0].astype(int)
-
-        self.test_data = np.loadtxt(
-            testing_file,
-            delimiter=",",
-            skiprows=1,
-        )
-        if self.label_present:
-            self.X_test, self.Y_test = self.test_data[:, 1:] / 255, self.test_data[
-                :, 0
-            ].astype(int)
-        else:
-            self.X_test = self.test_data[:, :] / 255
-
-    def shuffle_data(
-        self, x_data: NDArray[np.float64], y_data: NDArray[np.float64]
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        assert x_data.shape[0] == y_data.shape[0]
-        permuted_indicies = np.random.permutation(x_data.shape[0])
-        return x_data[permuted_indicies], y_data[permuted_indicies]
-
-    def load_training_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        return self.shuffle_data(
-            self.X_train[: int(0.9 * len(self.X_train)), :],
-            self.Y_train[: int(0.9 * len(self.X_train))],
-        )
-
-    def load_validation_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        return self.shuffle_data(
-            self.X_train[int(0.9 * len(self.X_train)) :, :],
-            self.Y_train[int(0.9 * len(self.X_train)) :],
-        )
-
-    def load_test_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        return self.X_test, self.Y_test if self.label_present else (self.X_test, None)
+    @classmethod
+    def load_training(
+        cls, filepath: str, val_split: float = 0.9
+    ) -> tuple[
+        tuple[NDArray[np.float64], NDArray[np.int_]],
+        tuple[NDArray[np.float64], NDArray[np.int_]],
+    ]:
+        data = np.loadtxt(filepath, delimiter=",")
+        X, y = data[:, 1:] / 255, data[:, 0].astype(int)
+        perm = np.random.permutation(len(X))
+        X, y = X[perm], y[perm]
+        split = int(val_split * len(X))
+        return (X[:split], y[:split]), (X[split:], y[split:])
 
 
 class Layer:
