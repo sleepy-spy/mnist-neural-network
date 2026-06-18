@@ -259,12 +259,7 @@ class Corrupt:
         return x_corrupted
 
 
-def train(big_data: LoadData) -> None:
-    save_weights = (
-        input("Do you wish to save the weights of the training? (y, n): ")
-        .strip()
-        .lower()
-    )
+def train(training_file, save_weights) -> None:
     nn = Network()
     max_epochs = 2**63 - 1
     best_validation_accuracy = 0.0
@@ -414,10 +409,11 @@ def main():
 
     if command == "train":
         training_file = sys.argv[2]
-        save_path = None
         if len(sys.argv) >= 4 and sys.argv[3].lower() == "yes":
-            save_path = "Models/model_parameters.npz"
-        train(training_file, save_path)
+            save_weights = True
+        else:
+            save_weights = False
+        train(training_file, save_weights)
 
     elif command == "test":
         if len(sys.argv) < 4:
