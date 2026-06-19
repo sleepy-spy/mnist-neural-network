@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Neural_Network import LoadData
+from neural_network import LoadData
 from random import randint
 big_data = LoadData(test_label=True)
 X_test, Y_test = big_data.load_test_data()
