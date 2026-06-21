@@ -1,53 +1,67 @@
-# Handoff — Session 3
+# MNIST Neural Network — Project History & Plan
 
-## What was done
+## Project overview
+An MNIST digit classifier built entirely with Python 3 + NumPy (no ML libraries like PyTorch or TensorFlow). Uses a fully connected network with He Normal initialization. Also contains data corruption utilities for experiments.
 
-### File restructuring
-- **`Neural_Network.py`** renamed to `neural_network.py` (case-insensitive filesystem, so git sees it as the same file)
-- **`Corrupt`** class extracted to `src/corrupt.py`
-- **`Layer`** class stays in `neural_network.py`
-- **Pure functions extracted:**
-  - `src/utils.py` — `ReLu`, `ReLu_differentiation`, `stable_softmax`, `one_hot_generation`, `cross_entropy_loss`, `dropout_mask`
-  - `src/metrics.py` — `is_correct_output`, `wrong_counter`
-  - `src/display.py` — `epoch_details`, `test_details` (dead code, never called)
-- **`IO` static class** added to `neural_network.py` — `save_parameters`, `load_parameters`, `save_hyperparameters`, `load_hyperparameters`
+## What has been done
 
-### Bugs fixed
-1. **`train()`** — was crashing on first epoch (`big_data` didn't exist). Now:
-   - Calls `LoadData.load_training(training_file)` once before epoch loop
-   - Uses `while True` with manual `epoch += 1` instead of `for epoch in range(max_epochs)`
-   - Passes `(X_val, y_val)` to `validate()` directly
-   - Shuffles training data every epoch via `np.random.permutation`
-   - Saves weights to `Models/Untested/<timestamp>/model_parameters.npz` (unique per run)
-   - `save_weights` used as bool (was `== "y"`)
-2. **`test()`** — was crashing (signature mismatch, old `big_data` API). Now:
-   - Signature: `test(testing_file, weights_file)` — matches `main()`
-   - Auto-detects labels by column count (785 = has labels)
-   - Flat file I/O (no reopen-per-batch)
-   - Fixed `np.clip(prediction[pred], 1e-10, 1.0)` (was missing `a_min`/`a_max`)
-   - Writes predictions to same dir as weights file
-   - No labels CSV output (redundant — labels are in the original file)
-3. **`validate()`** — `Y_validation` → `y_validation`, `small_data`/`correct_answers` → `batch_X`/`batch_y`
+### Core neural network
+- **Three-layer network**: 784 → 1024 → 512 → 10, with ReLU hidden activations, softmax output, cross-entropy loss
+- **Training loop**: mini-batch gradient descent with configurable batch size, learning rate, weight decay, and dropout
+- **Validation & testing**: epoch-wise validation, test inference with predictions written to CSV
+- **Weight saving/loading**: IO class saves/loads model parameters as `.npz` files
+- **Model weights stored at** `models/0.97814/model_kaggle_parameters.npz` (97.8% accuracy)
 
-### File layout
+### Refactoring & file structure
+- Monolithic `Neural_Network.py` was broken into `src/neural_network.py`, `src/utils.py`, `src/metrics.py`, `src/display.py`, `src/corrupt.py`
+- Pure functions (ReLU, softmax, one-hot encoding, cross-entropy loss, dropout) extracted to `src/utils.py`
+- Static `IO` class added for saving/loading parameters and hyperparameters
+- Fixed bugs in `train()` (crash on first epoch, shuffling per epoch, weight save paths), `test()` (signature mismatch, pixel clipping, file I/O), and `validate()` (variable name errors)
+
+### Current file layout
 ```
 src/
-├── corrupt.py         # Corrupt class (corruption utilities)
-├── display.py         # epoch_details, test_details (printing)
+├── corrupt.py         # Corrupt class (label/feature corruption)
+├── display.py         # epoch_details, test_details (printing — test_details is dead code)
 ├── metrics.py         # is_correct_output, wrong_counter
 ├── neural_network.py  # Layer, IO, LoadData, Network, train, validate, test, main
 ├── utils.py           # ReLu, stable_softmax, one_hot, cross_entropy_loss, dropout_mask
-└── visualise.py       # visualization (still broken — see below)
+└── visualise.py       # visualization (broken — needs migration)
 ```
 
-## What's still left
+### Known issues (open)
+- **`visualise.py`** — calls `LoadData(test_label=True)` with non-existent constructor. Needs migration to `LoadData.load_test()`. Also references old predictions path.
+- **`test_details()`** in `display.py` — never called. Dead code.
+- **`save_hyperparameters` / `load_hyperparameters`** in `IO` class — never called. Dead code.
 
-### Known issues
-- **`visualise.py`** — still calls `LoadData(test_label=True)` with non-existent constructor. Needs migration to `LoadData.load_test()`. Also references old predictions path `./Models/0.97814/Model Results/...`.
-- **`test_details()`** — still exists in `display.py` but never called anywhere. Dead code.
-- **`save_hyperparameters` / `load_hyperparameters`** — in `IO` class, never called. Dead code.
+## What we're planning next
 
-### Commits
-```
-870b55c refactor: restructure Network class, fix train/test bugs, and reorganize file layout
-```
+### Goal
+Build a web frontend where a user can draw a digit and get a real-time prediction from the trained model.
+
+### Approach: Flask + HTML Canvas + JavaScript
+Chosen over Gradio/Streamlit to learn the web stack (HTML, CSS, JavaScript, HTTP, Flask).
+
+### What it teaches
+1. **HTML** — `<canvas>`, page structure, element attributes, forms
+2. **CSS** — layout, dark theme, styling canvas and buttons
+3. **JavaScript** — canvas 2D drawing (mouse events), getting pixel data, `fetch()` API for HTTP requests, async/await, JSON
+4. **Flask** — routes, serving HTML, receiving POST data, returning JSON
+5. **Image processing** — using Pillow to convert RGBA → grayscale, resize 280×280 → 28×28, normalize for model input
+
+### Files to create
+- **`templates/index.html`** — the drawing interface (canvas, buttons, result display, inline CSS + JS)
+- **`src/app.py`** — Flask server with two routes: `GET /` serves the page, `POST /predict` processes the image and runs inference
+
+### Pipeline
+Canvas (280×280 RGBA) → Pillow resize to 28×28 → grayscale → normalize `/ 255` → reshape to `(1, 784)` → `Network.forward_propagation()` → `np.argmax()` → return JSON `{ digit, confidence }`
+
+### Dependencies
+- `Flask` (to be installed)
+
+### Canvas UX
+Black background, white pen (matches MNIST natively — no color inversion needed).
+
+---
+
+**Last commit**: `870b55c refactor: restructure Network class, fix train/test bugs, and reorganize file layout`
