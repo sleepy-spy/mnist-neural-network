@@ -17,22 +17,83 @@ An MNIST digit classifier built entirely with Python 3 + NumPy (no ML libraries 
 - Pure functions (ReLU, softmax, one-hot encoding, cross-entropy loss, dropout) extracted to `src/utils.py`
 - Static `IO` class added for saving/loading parameters and hyperparameters
 - Fixed bugs in `train()` (crash on first epoch, shuffling per epoch, weight save paths), `test()` (signature mismatch, pixel clipping, file I/O), and `validate()` (variable name errors)
+- `src/visualise.py` fixed: `LoadData` constructor → `load_test()` classmethod, predictions path via `sys.argv[1]`, import fixed, unused imports removed, `Y_test` → `y_test`
+- Model save path lowercased: `"Models"/"Untested"` → `"models"/"untested"`
+- Predictions CSV column `Loss` renamed to `TopGuessNLL` (no true label — just `-log(p)` of top guess)
 
 ### Current file layout
 ```
 src/
 ├── corrupt.py         # Corrupt class (label/feature corruption)
-├── display.py         # epoch_details, test_details (printing — test_details is dead code)
+├── display.py         # epoch_details, test_details (test_details is unused)
 ├── metrics.py         # is_correct_output, wrong_counter
 ├── neural_network.py  # Layer, IO, LoadData, Network, train, validate, test, main
 ├── utils.py           # ReLu, stable_softmax, one_hot, cross_entropy_loss, dropout_mask
-└── visualise.py       # visualization (broken — needs migration)
+└── visualise.py       # visualization (takes predictions CSV as CLI arg)
 ```
 
 ### Known issues (open)
-- **`visualise.py`** — calls `LoadData(test_label=True)` with non-existent constructor. Needs migration to `LoadData.load_test()`. Also references old predictions path.
-- **`test_details()`** in `display.py` — never called. Dead code.
+- **`test_details()`** in `display.py` — never called. Wiring into `test()` is drafted below but not yet implemented.
+
+  Proposed full `test()` function with accuracy tracking:
+  ```python
+  def test(testing_file, weights_file) -> None:
+      nn = Network()
+      nn.batch_size = 512
+      IO.load_parameters(nn.l1, nn.l2, nn.l3, filepath=weights_file)
+
+      data = np.loadtxt(testing_file, delimiter=",")
+      has_labels = data.shape[1] == 785
+      if has_labels:
+          X_test, y_test = data[:, 1:] / 255, data[:, 0].astype(int)
+      else:
+          X_test = data / 255
+
+      predictions_path = str(Path(weights_file).parent / "predictions.csv")
+
+      test_wrong_predictions = {num_class: 0 for num_class in range(10)}
+      correct_outputs = 0
+      total_test_loss = 0.0
+
+      with open(predictions_path, "w") as f:
+          if has_labels:
+              f.write("ImageId,Label,TopGuessNLL,Entropy\n")
+          else:
+              f.write("ImageId,Label\n")
+
+      with open(predictions_path, "a") as f_pred:
+          for row in range(0, len(X_test), nn.batch_size):
+              batch_X = X_test[row : row + nn.batch_size]
+              if has_labels:
+                  batch_y = y_test[row : row + nn.batch_size]
+              nn.forward_propagation(batch_X, False)
+              if has_labels:
+                  total_test_loss += cross_entropy_loss(nn.a3, batch_y)
+                  correct_outputs += is_correct_output(nn.a3, batch_y)
+                  test_wrong_predictions = wrong_counter(
+                      nn.a3, batch_y, test_wrong_predictions
+                  )
+              for i, preds in enumerate(nn.a3):
+                  image_id = row + i + 1
+                  pred = np.argmax(preds)
+                  if has_labels:
+                      f_pred.write(
+                          f"{image_id},{pred},"
+                          f"{-np.log(np.clip(preds[pred], 1e-10, 1.0)):.6f},"
+                          f"{-np.sum(preds * np.log(np.clip(preds, 1e-10, 1.0))):.6f}\n"
+                      )
+                  else:
+                      f_pred.write(f"{image_id},{pred}\n")
+
+      if has_labels:
+          testing_accuracy = correct_outputs / len(X_test)
+          test_details(testing_accuracy, test_wrong_predictions)
+  ```
+
+  Also update import (line 17): `from display import epoch_details` → `from display import epoch_details, test_details`
+
 - **`save_hyperparameters` / `load_hyperparameters`** in `IO` class — never called. Dead code.
+- **`src/Neural_Network.py`** — old monolith still present. Consider removing.
 
 ## What we're planning next
 
@@ -64,4 +125,4 @@ Black background, white pen (matches MNIST natively — no color inversion neede
 
 ---
 
-**Last commit**: `870b55c refactor: restructure Network class, fix train/test bugs, and reorganize file layout`
+**Last commit**: `359a293 docs: add project history and frontend plan to HANDOFF.md`

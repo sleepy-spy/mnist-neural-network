@@ -177,7 +177,7 @@ def train(training_file, save_weights) -> None:
     best_epoch = 0
     epoch = 0
 
-    models_dir = Path(__file__).resolve().parent.parent / "Models" / "Untested"
+    models_dir = Path(__file__).resolve().parent.parent / "models" / "untested"
     if save_weights:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_dir = models_dir / timestamp
@@ -263,7 +263,7 @@ def test(testing_file, weights_file) -> None:
     predictions_path = str(Path(weights_file).parent / "predictions.csv")
     with open(predictions_path, "w") as f:
         if has_labels:
-            f.write("ImageId,Label,Loss,Uncertainty\n")
+            f.write("ImageId,Label,TopGuessNLL,Entropy\n")
         else:
             f.write("ImageId,Label\n")
 
@@ -271,14 +271,14 @@ def test(testing_file, weights_file) -> None:
         for row in range(0, len(X_test), nn.batch_size):
             batch_X = X_test[row : row + nn.batch_size]
             nn.forward_propagation(batch_X, False)
-            for i, prediction in enumerate(nn.a3):
+            for i, preds in enumerate(nn.a3):
                 image_id = row + i + 1
-                pred = np.argmax(prediction)
+                pred = np.argmax(preds)
                 if has_labels:
                     f_pred.write(
                         f"{image_id},{pred},"
-                        f"{-np.log(np.clip(prediction[pred], 1e-10, 1.0)):.6f},"
-                        f"{-np.sum(prediction * np.log(np.clip(prediction, 1e-10, 1.0))):.6f}\n"
+                        f"{-np.log(np.clip(preds[pred], 1e-10, 1.0)):.6f},"
+                        f"{-np.sum(preds * np.log(np.clip(preds, 1e-10, 1.0))):.6f}\n"
                     )
                 else:
                     f_pred.write(f"{image_id},{pred}\n")
