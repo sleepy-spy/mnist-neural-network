@@ -14,7 +14,7 @@ from utils import (
     dropout_mask,
 )
 from metrics import is_correct_output, wrong_counter
-from display import epoch_details
+from display import epoch_details, test_details
 
 
 class Layer:
@@ -261,6 +261,11 @@ def test(testing_file, weights_file) -> None:
         X_test = data / 255
 
     predictions_path = str(Path(weights_file).parent / "predictions.csv")
+
+    test_wrong_predictions = {num_class: 0 for num_class in range(10)}
+    correct_outputs = 0
+    total_test_loss = 0.0
+
     with open(predictions_path, "w") as f:
         if has_labels:
             f.write("ImageId,Label,TopGuessNLL,Entropy\n")
@@ -270,7 +275,15 @@ def test(testing_file, weights_file) -> None:
     with open(predictions_path, "a") as f_pred:
         for row in range(0, len(X_test), nn.batch_size):
             batch_X = X_test[row : row + nn.batch_size]
+            if has_labels:
+                batch_y = y_test[row : row + nn.batch_size]
             nn.forward_propagation(batch_X, False)
+            if has_labels:
+                total_test_loss += cross_entropy_loss(nn.a3, batch_y)
+                correct_outputs += is_correct_output(nn.a3, batch_y)
+                test_wrong_predictions = wrong_counter(
+                    nn.a3, batch_y, test_wrong_predictions
+                )
             for i, preds in enumerate(nn.a3):
                 image_id = row + i + 1
                 pred = np.argmax(preds)
@@ -282,6 +295,10 @@ def test(testing_file, weights_file) -> None:
                     )
                 else:
                     f_pred.write(f"{image_id},{pred}\n")
+
+    if has_labels:
+        testing_accuracy = correct_outputs / len(X_test)
+        test_details(testing_accuracy, test_wrong_predictions)
 
 
 def main():
